@@ -48,6 +48,19 @@ pub enum SubCommands {
         /// Resulting number to target
         n: u16,
     },
+
+    Password {
+        /// Password string used for the operation
+        //#[arg(short, long)]
+        password: String,
+    },
+    GenPass {
+        /// 2-3 $RANDOM numbers as input for brute-forcing the seed
+        ///
+        /// 2 => multiple possible seeds, 3 => single seed
+        #[clap(num_args = 10, required = true)]
+        numbers: Vec<u16>,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]

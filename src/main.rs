@@ -1,7 +1,9 @@
+extern crate chrono;
 use std::thread;
 
 use clap::Parser;
 use crossbeam_channel::unbounded;
+use chrono::{DateTime, NaiveDateTime, Utc};
 
 use bashrand::{
     cli::{Args, SubCommands, Version},
@@ -45,6 +47,7 @@ fn do_main(args: Args) -> Result<()> {
         Version::New => (false, true),
         Version::Both => (true, true),
     };
+
 
     match args.command {
         SubCommands::Crack { numbers } => {
@@ -160,6 +163,63 @@ fn do_main(args: Args) -> Result<()> {
                 log::success(format!("Finished! ({count} seeds)"));
             }
         }
+
+        SubCommands::Password { password } => {
+            println!("Received password: {}, len= {}", password, password.len());
+            let matrix = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            let mut is_match ;
+            let mut seed = 0u64;
+            let now = Utc::now();  // Get the current UTC time
+
+            // Convert to a Unix timestamp in seconds
+            let current = now.timestamp() as u64;
+           
+            
+            while seed < current  {
+                let mut _rng = Random::new(seed.try_into().unwrap(), true);
+                is_match = true;
+                
+                for (i, char_expected) in password.chars().enumerate() {
+                    let n = _rng.next_16();
+                    let c = matrix.chars().nth(n as usize % matrix.len()).unwrap();
+        
+                    if c != char_expected {
+                        is_match = false;
+                        break;
+                    }
+                    if i == (password.len() - 1) && is_match {
+                        println!("Matching seed found: {}", seed);
+                        let naive_datetime = NaiveDateTime::from_timestamp(seed as i64, 0);
+                        let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
+                        let formatted_date = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+                        println!("Formatted seed date and time: {}", formatted_date);
+                    }
+                }
+        
+                seed += 1;
+            }
+           
+        },
+
+        SubCommands::GenPass { numbers } => {
+            // Check if any number exceeds the maximum allowed for BASH_RAND_MAX
+            if numbers.iter().any(|n| *n > BASH_RAND_MAX) {
+                return Err(format!("Numbers must be at most 15 bits (max: {})", BASH_RAND_MAX).into());
+            }
+        
+            let matrix = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        
+            // Iterate over the provided numbers to generate the password
+            for &i in numbers.iter() {
+                let c = matrix.chars().nth((i as usize) % matrix.len()).unwrap(); // Safely get the character
+                print!("{}", c);  // Print the character as part of the password generation
+            }
+            
+            println!("\n");
+            //Ok(())  // Return Ok if everything goes well
+        }
+        
+
     }
     Ok(())
 }
